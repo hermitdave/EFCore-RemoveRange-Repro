@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,13 +32,15 @@ namespace Repro_Console
                     break;
                 }
 
-                ReinsertDbReconds(channelCode);
+                ReinsertDbRecondsUsingORM(channelCode); // throws error every so often
+
+                //ReinsertDbRecondsUsingSql(channelCode); // works like a charm
             }
 
 
         }
 
-        static void ReinsertDbReconds(string channelcode)
+        static void ReinsertDbRecondsUsingORM(string channelcode)
         {
             using (var db = new AppDbContext())
             {
@@ -47,6 +50,29 @@ namespace Repro_Console
                     db.DbArticleData.RemoveRange(itemsToDelete);
                     db.SaveChanges();
                 }
+                
+                Console.WriteLine("Existing records deleted");
+
+                for (int i = 1; i <= 200; i++)
+                {
+                    db.DbArticleData.Add(new Database.DbArticleData() { ID = i, Channel = channelcode, Data = $"Dummy data for row {i}" });
+                }
+
+                db.SaveChanges();
+
+                Console.WriteLine("New records added");
+            }
+        }
+
+        static void ReinsertDbRecondsUsingSql(string channelcode)
+        {
+            using (var db = new AppDbContext())
+            {
+                var deleteCommand = "DELETE FROM DbArticleData WHERE Channel = @channelName";
+
+                var channelParam = new SqliteParameter("@channelName", channelcode);
+
+                db.Database.ExecuteSqlCommand(deleteCommand, channelParam);
 
                 Console.WriteLine("Existing records deleted");
 
